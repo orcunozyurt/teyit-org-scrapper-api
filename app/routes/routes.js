@@ -52,13 +52,12 @@ module.exports = function (app) {
                 const $ = cheerio.load(html);
 
                 let header = $('.entry-title').text();
-                let author = $('.cb-author').find('a').text();
+                let author = $('.cb-entry-header').find('.cb-byline').find('.cb-author').find('a').text();
                 let date_unparsed = $('.cb-entry-header').find('.cb-date').text();
                 let date = date_unparsed.slice(0, 10) + "-" + date_unparsed.slice(10);
                 let iddia_box = $('.iddia_box').attr('class').split(' ');
                 let iddia_text = $('.iddia_box').find('span').text();
                 let result = iddia_box[1];
-
                 let text = $('.cb-itemprop').find('p').text();
 
                 let json = {
