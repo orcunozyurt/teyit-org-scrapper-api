@@ -4,17 +4,20 @@ const baseURL = 'https://teyit.org'
 
 
 module.exports = function (app) {
-    app.get('/featured/', function (req, res) {
+    app.get('/all/', function (req, res) {
         // The scraping magic will happen here
         request(baseURL, function (error, response, html) {
             if (!error) {
 
                 const $ = cheerio.load(html);
                 const response_arr = [];
+                let landingPage = $('div.cb-main');
+                let articles = landingPage.find('.cb-article');
 
-                let featuredNews = $('div.cb-grid-feature').each((index, element) => {
-                    let link = $(element).children('.cb-link').attr('href');
-                    let article_info = $(element).children('.cb-article-meta');
+                let featuredNews = articles.each((index, element) => {
+
+                    let link = $(element).find('.cb-post-title').find('a').attr('href');
+                    let article_info = $(element).children('.cb-meta');
                     let author = $(article_info).children('.cb-byline').find('.cb-author').find('a').text();
                     let title = $(article_info).find('h2').find('a').text();
                     let date_unparsed = $(article_info).children('.cb-byline').find('.cb-date').text();
@@ -48,16 +51,18 @@ module.exports = function (app) {
         let url = baseURL + '/' + blob
         request(url, function (error, response, html) {
             if (!error) {
-
+                let result = null;
                 const $ = cheerio.load(html);
 
                 let header = $('.entry-title').text();
                 let author = $('.cb-entry-header').find('.cb-byline').find('.cb-author').find('a').text();
                 let date_unparsed = $('.cb-entry-header').find('.cb-date').text();
                 let date = date_unparsed.slice(0, 10) + "-" + date_unparsed.slice(10);
-                let iddia_box = $('.iddia_box').attr('class').split(' ');
                 let iddia_text = $('.iddia_box').find('span').text();
-                let result = iddia_box[1];
+                if ($('.iddia_box').attr('class')) {
+                    let iddia_box = $('.iddia_box').attr('class').split(' ');
+                    result = iddia_box[1];
+                }
                 let text = $('.cb-itemprop').find('p').text();
 
                 let json = {
