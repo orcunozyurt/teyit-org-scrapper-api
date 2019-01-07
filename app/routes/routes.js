@@ -24,8 +24,11 @@ module.exports = function (app) {
                     let date = date_unparsed.slice(0, 10) + "-" + date_unparsed.slice(10);
                     var identifier = link.replace('https://teyit.org/', '');
                     identifier = identifier.slice(0, identifier.length - 1)
+                    let thumbnail = $(element).find('img').attr('src');
+
 
                     let json = {
+                        thumbnail: thumbnail,
                         title: title,
                         url_slug: identifier,
                         author: author,
@@ -40,14 +43,15 @@ module.exports = function (app) {
         });
     });
 
-    app.get('/fact/:blob', function (req, res) {
+    app.get('/fact/:slug', function (req, res) {
         // The scraping magic will happen here
-        blob = req.params.blob
-        let url = baseURL + '/' + blob
+        slug = req.params.slug
+        let url = baseURL + '/' + slug
         request(url, function (error, response, html) {
             if (!error) {
                 let result = null;
                 const $ = cheerio.load(html);
+                const image_arr = [];
 
                 let header = $('.entry-title').text();
                 let author = $('.cb-entry-header').find('.cb-byline').find('.cb-author').find('a').text();
@@ -59,12 +63,19 @@ module.exports = function (app) {
                     result = iddia_box[1];
                 }
                 let text = $('.cb-itemprop').find('p').text();
+                let image_containers = $('.cb-itemprop').children('.cb-alert');
+                image_containers.each((index, element) => {
+                    let imageUrl = $(element).find('img').attr('src');
+                    image_arr.push(imageUrl);
+                });
+
 
                 let json = {
                     title: header,
                     claim: iddia_text,
                     author: author,
                     result: result,
+                    images: image_arr,
                     date: date,
                     content: text
                 };
