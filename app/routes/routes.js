@@ -4,28 +4,43 @@ const baseURL = 'https://teyit.org'
 
 
 module.exports = function (app) {
-    app.get('/all/', function (req, res) {
+    app.get('/all', function (req, res) {
         // The scraping magic will happen here
-        request(baseURL, function (error, response, html) {
+        lang = req.query.lang
+        let url = baseURL
+        if (lang === 'eng' || lang === 'en') {
+            url = baseURL + '/' + 'eng'
+        }
+        request(url, function (error, response, html) {
             if (!error) {
-
                 const $ = cheerio.load(html);
                 const response_arr = [];
                 let landingPage = $('div.cb-main');
                 let articles = landingPage.find('.cb-article');
 
-                let featuredNews = articles.each((index, element) => {
+                if (lang === 'eng' || lang === 'en') {
+                    articles = $('div.cb-grid-feature');
+                }
 
-                    let link = $(element).find('.cb-post-title').find('a').attr('href');
-                    let article_info = $(element).children('.cb-meta');
+                let featuredNews = articles.each((index, element) => {
+                    var link;
+                    var article_info;
+
+                    if (lang === 'eng' || lang === 'en') {
+                        link = $(element).children('.cb-link').attr('href');
+                        article_info = $(element).children('.cb-article-meta');
+                    } else {
+                        link = $(element).find('.cb-post-title').find('a').attr('href');
+                        article_info = $(element).children('.cb-meta');
+                    }
                     let author = $(article_info).children('.cb-byline').find('.cb-author').find('a').text();
                     let title = $(article_info).find('h2').find('a').text();
                     let date_unparsed = $(article_info).children('.cb-byline').find('.cb-date').text();
                     let date = date_unparsed.slice(0, 10) + "-" + date_unparsed.slice(10);
                     var identifier = link.replace('https://teyit.org/', '');
+                    identifier = identifier.replace('en/', '');
                     identifier = identifier.slice(0, identifier.length - 1)
                     let thumbnail = $(element).find('img').attr('src');
-
 
                     let json = {
                         thumbnail: thumbnail,
@@ -49,9 +64,11 @@ module.exports = function (app) {
         let url = baseURL + '/' + slug
         request(url, function (error, response, html) {
             if (!error) {
-                let result = null;
+                let proven = null;
                 const $ = cheerio.load(html);
                 const image_arr = [];
+                let text = ''
+                let image_containers = [];
 
                 let header = $('.entry-title').text();
                 let author = $('.cb-entry-header').find('.cb-byline').find('.cb-author').find('a').text();
@@ -60,10 +77,20 @@ module.exports = function (app) {
                 let iddia_text = $('.iddia_box').find('span').text();
                 if ($('.iddia_box').attr('class')) {
                     let iddia_box = $('.iddia_box').attr('class').split(' ');
-                    result = iddia_box[1];
+                    let result = iddia_box[1];
+                    if (result === 'dogru' || result === 'true') {
+                        proven = true;
+                    } else {
+                        proven = false;
+                    }
                 }
-                let text = $('.cb-itemprop').find('p').text();
-                let image_containers = $('.cb-itemprop').children('.cb-alert');
+                if ($('.cb-itemprop').attr('class')) {
+                    text = $('.cb-itemprop').find('p').text();
+                    image_containers = $('.cb-itemprop').children('.cb-alert');
+                } else {
+                    text = $('.cb-entry-content').find('p').text();
+                    image_containers = $('.cb-entry-content').children('.cb-alert');
+                }
                 image_containers.each((index, element) => {
                     let imageUrl = $(element).find('img').attr('src');
                     image_arr.push(imageUrl);
@@ -74,7 +101,7 @@ module.exports = function (app) {
                     title: header,
                     claim: iddia_text,
                     author: author,
-                    result: result,
+                    proven: proven,
                     images: image_arr,
                     date: date,
                     content: text
