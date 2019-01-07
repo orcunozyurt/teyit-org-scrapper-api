@@ -34,13 +34,8 @@ module.exports = function (app) {
                     };
 
                     response_arr.push(json);
-
                 });
-
-                console.log('RESPONSE', ": ", response_arr);
-
                 res.send(response_arr);
-
             }
         });
     });
@@ -73,11 +68,7 @@ module.exports = function (app) {
                     date: date,
                     content: text
                 };
-
-                console.log('RESPONSE', ": ", json);
-
                 res.send(json);
-                //res.send("identifier is set to " + req.params.blob);
 
             }
         });
