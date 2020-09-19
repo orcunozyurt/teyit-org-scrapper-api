@@ -36,6 +36,35 @@ function handleMainPageHtmlResponse(body) {
   return response_arr;
 }
 
+function handleDetailPageHtmlResponse(body) {
+  const $ = cheerio.load(body);
+
+  let image_arr = [];
+
+  let header = $("title").text();
+  let author = $(".author-box").find("p").first().text();
+  let isFraudImageSrc = $(".fraud-type-img").attr("src");
+  let proven = isFraudImageSrc.includes("dogru");
+  let date = $(".post-metadata-group").find(".ml-1").text();
+  let content = $(".evidence-group").find("p").text();
+  let image = $(".visual-summary-correctness").find("img").attr("src");
+  image_arr.push(image);
+
+  let json = {
+    title: header,
+    claim: header,
+    author: author,
+    proven: proven,
+    images: image_arr,
+    date: date,
+    content: content,
+  };
+
+  console.log(json);
+
+  return json;
+}
+
 module.exports = function (app) {
   app.get("/all", function (req, res) {
     // The scraping magic will happen here
@@ -71,58 +100,31 @@ module.exports = function (app) {
   });
 
   app.get("/fact/:slug", function (req, res) {
-    // The scraping magic will happen here
     slug = req.params.slug;
     let url = baseURL + "/" + slug;
-    request(url, function (error, response, html) {
-      if (!error) {
-        let proven = null;
-        const $ = cheerio.load(html);
-        const image_arr = [];
-        let text = "";
-        let image_containers = [];
 
-        let header = $(".entry-title").text();
-        let author = $(".cb-entry-header")
-          .find(".cb-byline")
-          .find(".cb-author")
-          .find("a")
-          .text();
-        let date_unparsed = $(".cb-entry-header").find(".cb-date").text();
-        let date = date_unparsed.slice(0, 10) + "-" + date_unparsed.slice(10);
-        let iddia_text = $(".iddia_box").find("span").text();
-        if ($(".iddia_box").attr("class")) {
-          let iddia_box = $(".iddia_box").attr("class").split(" ");
-          let result = iddia_box[1];
-          if (result === "dogru" || result === "true") {
-            proven = true;
-          } else {
-            proven = false;
-          }
-        }
-        if ($(".cb-itemprop").attr("class")) {
-          text = $(".cb-itemprop").find("p").text();
-          image_containers = $(".cb-itemprop").children(".cb-alert");
-        } else {
-          text = $(".cb-entry-content").find("p").text();
-          image_containers = $(".cb-entry-content").children(".cb-alert");
-        }
-        image_containers.each((index, element) => {
-          let imageUrl = $(element).find("img").attr("src");
-          image_arr.push(imageUrl);
-        });
-
-        let json = {
-          title: header,
-          claim: iddia_text,
-          author: author,
-          proven: proven,
-          images: image_arr,
-          date: date,
-          content: text,
-        };
-        res.send(json);
-      }
-    });
+    puppeteer
+      .launch({
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      })
+      .then(function (browser) {
+        return browser.newPage();
+      })
+      .then(function (page) {
+        return page
+          .goto(url, {
+            waitUntil: "networkidle0",
+          })
+          .then(function () {
+            return page.content();
+          });
+      })
+      .then(function (html) {
+        var parsed = handleDetailPageHtmlResponse(html);
+        res.send(parsed);
+      })
+      .catch(function (err) {
+        res.send({ error: err });
+      });
   });
 };
