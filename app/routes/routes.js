@@ -1,6 +1,9 @@
 const request = require("request");
 const puppeteer = require("puppeteer");
 const cheerio = require("cheerio");
+const shiftParser = require("shift-parser");
+//import parseScript from "shift-parser";
+
 const baseURL = "https://teyit.org";
 
 function handleMainPageHtmlResponse(body) {
@@ -100,31 +103,39 @@ module.exports = function (app) {
   });
 
   app.get("/fact/:slug", function (req, res) {
+    // The scraping magic will happen here
     slug = req.params.slug;
     let url = baseURL + "/" + slug;
+    request(url, function (error, response, html) {
+      if (!error) {
+        let proven = null;
+        const $ = cheerio.load(html);
+        const image_arr = [];
+        let text = "";
+        let image_containers = [];
 
-    puppeteer
-      .launch({
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      })
-      .then(function (browser) {
-        return browser.newPage();
-      })
-      .then(function (page) {
-        return page
-          .goto(url, {
-            waitUntil: "networkidle0",
-          })
-          .then(function () {
-            return page.content();
-          });
-      })
-      .then(function (html) {
-        var parsed = handleDetailPageHtmlResponse(html);
-        res.send(parsed);
-      })
-      .catch(function (err) {
-        res.send({ error: err });
-      });
+        let script_text = $("#main-script").html();
+        let scriptAST = shiftParser.parseScript(script_text);
+        let encodedData =
+          scriptAST.statements[1].declaration.declarators[0].init.value;
+        let decodedData = decodeURIComponent(encodedData);
+        decodedData = JSON.parse(decodedData);
+        let summary = JSON.parse(decodedData.summary);
+        let data = JSON.parse(decodedData.data);
+
+        console.log(data);
+
+        let json = {
+          title: decodedData.title,
+          claim: decodedData.title,
+          authors: summary.authors,
+          correctness: decodedData.correctness,
+          featured_image: summary.featured_image,
+          date: decodedData.create_time,
+          content: data.evidences,
+        };
+        res.send(json);
+      }
+    });
   });
 };
