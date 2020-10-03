@@ -63,7 +63,7 @@ function handleDetailPageHtmlResponse(body) {
     content: content,
   };
 
-  console.log(json);
+  //console.log(json);
 
   return json;
 }
@@ -123,7 +123,7 @@ module.exports = function (app) {
         let summary = JSON.parse(decodedData.summary);
         let data = JSON.parse(decodedData.data);
 
-        console.log(data);
+        //console.log(data);
 
         let json = {
           title: decodedData.title,
